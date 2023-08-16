@@ -1,7 +1,2 @@
 /test/
-
-serve*
-!serve.c
-
-client*
-!client.c
+*.o
