@@ -58,7 +58,6 @@ int main(int argc,char **argv){
 		perror("创建子进程失败！\n");
 		exit(1);
 	}
-	close(serv_socket);
 	if(child_pid == 0){
 		//子进程：读取来自客户端的信息
 		char buf[512]={0};
@@ -66,18 +65,16 @@ int main(int argc,char **argv){
 			printf("message from client: %s",buf);
 			memset(&buf,0,512);
 		}
-		printf("客户端断开连接,子进程退出！\n");
 		exit(0);
 	}else{
 		//父进程:向客户端发送信息
 		char buf[512]={0};
-		//若客户端 ctrl + c,则为NULL
-		while(fgets(&buf,sizeof(buf),stdin) != NULL){
+		while(fgets(&buf,sizeof(buf),stdin)){
 			write(client_socket,&buf,sizeof(buf));
 			memset(&buf,0,512);
 		}
-		kill(child_pid,SIGUSR1);//杀子进程	
-	}	
+	}
+
 	//7.关闭套接字
 	close(client_socket);
 

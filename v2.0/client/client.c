@@ -48,7 +48,7 @@ int main(int argc,char **argv){
 	}else{
 		//父进程:向客户端发送信息
 		char buf[512]={0};
-		while(fgets(buf,sizeof(buf),stdin)){
+		while(fgets(&buf,sizeof(buf),stdin)){
 			write(client_socket,&buf,sizeof(buf));
 			memset(&buf,0,512);
 		}
