@@ -9,6 +9,12 @@
 #include <errno.h>
 #include <signal.h>
 
+#define MAXLEN 512
+#define MAXCLIENT 10
+
+
+
+
 int main(int argc,char **argv){
 	//1.创建tcp套接字
 	int serv_socket = socket(AF_INET,SOCK_STREAM,IPPROTO_TCP);
@@ -22,7 +28,7 @@ int main(int argc,char **argv){
 	memset(&addr,0,sizeof(addr));                 //全部置0
 	addr.sin_family      = AF_INET;               //IPv4
 	addr.sin_port        = htons(8000);
-	addr.sin_addr.s_addr = inet_addr("127.0.0.1"); //监听所有的网口
+	addr.sin_addr.s_addr = inet_addr("127.0.0.1"); //监听网口
 
 	//3.将套接字和IP、端口绑定
 	int ret = bind(serv_socket, (struct sockaddr*)&addr, sizeof(addr));
@@ -33,7 +39,7 @@ int main(int argc,char **argv){
 
 	//4.启动监听
 	printf("启动监听！\n");
-	ret = listen(serv_socket,10);            //最大支持10个连接
+	ret = listen(serv_socket,MAXCLIENT);            //最大支持10个连接
 	if(ret != 0 ){
 		perror("listen error");
 		exit(1);
@@ -60,19 +66,20 @@ int main(int argc,char **argv){
 	}
 	if(child_pid == 0){
 		//子进程：读取来自客户端的信息
-		char buf[512]={0};
-		while(read(client_socket,&buf,512)){
+		char buf[MAXLEN]={0};
+		while(read(client_socket,&buf,MAXLEN)){
 			printf("message from client: %s",buf);
-			memset(&buf,0,512);
+			memset(&buf,0,MAXLEN);
 		}
 		exit(0);
 	}else{
 		//父进程:向客户端发送信息
-		char buf[512]={0};
+		char buf[MAXLEN]={0};
 		while(fgets(&buf,sizeof(buf),stdin)){
 			write(client_socket,&buf,sizeof(buf));
-			memset(&buf,0,512);
+			memset(&buf,0,MAXLEN);
 		}
+		printf("父进程退出！\n");
 	}
 
 	//7.关闭套接字

@@ -29,8 +29,7 @@ int main(int argc,char **argv){
 		return 0;
 	}
 
-
-	//6.创建子进程，用于与此连接进行双工通信
+	//4.创建子进程，用于与此连接进行双工通信
 	pid_t child_pid = fork();
 	if(child_pid == -1){
 		perror("创建子进程失败！\n");
