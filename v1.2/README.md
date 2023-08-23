@@ -30,6 +30,14 @@ $ ./app xxx.xxx.xxx.59
 $ ./app xxx.xxx.xxx.59
 
 ```
+
+在`xxx.xxx.xxx.59`的再另起一个终端：
+```shell
+$ ./app xxx.xxx.xxx.131
+Wed Aug 23 15:34:36 2023
+xxx.xxx.xxx.131 加入了连接
+```
+
 ### 代码实现
 ### 客户端类与服务端类
 利用面向对象思想，对服务器和客户端类进行封装，具体的实现如下：
