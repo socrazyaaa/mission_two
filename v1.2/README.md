@@ -23,7 +23,11 @@ xxx.xxx.xxx.126 加入了连接
 Wed Aug 23 15:40:41 2023
 xxx.xxx.xxx.126:nice to meet you!
 ```
-
+在`xxx.xxx.xxx.126`的终端，开启服务器线程和客户端线程。并向服务器发送信息，服务器接受到信息以后，将其转发给其他的客户端：
+```shell
+$ ./app xxx.xxx.xxx.123
+nice to meet you!
+```
 在`xxx.xxx.xxx.124`终端，开启服务器线程和客户端线程：
 ```shell
 $ ./app xxx.xxx.xxx.123
@@ -37,11 +41,7 @@ $ ./app xxx.xxx.xxx.123
 Wed Aug 23 15:40:41 2023
 xxx.xxx.xxx.126:nice to meet you!
 ```
-在`xxx.xxx.xxx.126`的终端，开启服务器线程和客户端线程。并向服务器发送信息，服务器接受到信息以后，将其转发给其他的客户端：
-```shell
-$ ./app xxx.xxx.xxx.123
-nice to meet you!
-```
+
 ### 2、向某一个节点的服务器发起连接
 除了第一个开启的程序只有服务器线程以外，其余的程序都拥有客户端线程和服务器线程。运行示意如下：`124` 与 `123`建立连接；而`125`和`126` 与`124`建立连接。    
 在`xxx.xxx.xxx.123`的终端，只开启服务器线程：
