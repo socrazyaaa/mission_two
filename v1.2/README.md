@@ -81,270 +81,229 @@ nice to meet you!
 
 ## 代码实现
 ### 客户端类与服务端类
-利用面向对象思想，对服务器和客户端类进行封装，具体的实现如下：
+利用面向对象思想，对服务器和客户端类进行封装，具体的实现如下。在客户端对象中，支持向指定服务器发起连接，并创建线程监听客户端；在服务器对象中，支持保存所有建立连接的套接字，支持向所有的套接字转发信息，支持向所有的套接字发送信息。其定义如下：  
+`Client.h`:
 ```c++
 class TcpClient{
 	public:
-		int m_sockfd;
+		int m_sockfd;             // 与服务器通信的套接字
+		int m_port;			      // 端口
+		char* m_ip;			      // 服务器IP地址
 	public:
 		TcpClient();
+		TcpClient(int port);//初始化端口
 		~TcpClient();
+
 		/*
-		 *ConnectToServer-向服务器发起连接
-		 *
-		 *@serverip:服务器IP地址
-		 *@port:端口号
+		 *IPv4_verify-验证IPv4 地址是否合法
+		 *@ip：需要验证的IP
 		 */
-		bool ConnectToServer(const char* serverip,const int port);
+		bool IPv4_verify(char* ip);
+
+		/*
+		 *Read-读取来自套接字的消息，并将其打印到终端
+		 *@arg：socket套接字
+		 */
+		static void* Read(void* arg);
+
+		/*
+		 *Write-获取终端上的输入，并将其发送给套接字
+		 *@buf：需要发送的内容
+		 *@buf_size：字符串的长度
+		 */
+		int Write(char* buf,int buf_size);
+
+		/*
+		 *ConnectToServer-向服务器 m_ip:m_port 发起连接
+		 */
+		bool ConnectToServer();
+};
+```
+`server.h`:
+```c++
+class TcpServer;
+
+//需要发送的数据结构体包含需要发送的套接字、ip
+struct Msg{
+	int sockfd;  //套接字
+	char *ip;	 // ip地址
+	TcpServer* ser;
+	Msg(int fd,char* str,TcpServer* ser):sockfd(fd),ip(str),ser(ser){}
 };
 
 class TcpServer{
 	public:
-		int    m_sockfd;                  //服务器创建的套接字
-		int    client_sockfd;             //服务端与客户端进行通信的套接字 
-		char*  client_ip;                 //连接服务器的客户端ip     
-		struct sockaddr_in m_addr;        //服务器sockaddr_in结构体变量   
+		pthread_rwlock_t sockfd_rwlock;		//读写锁:用于维护连接到服务器的客户端套接字
+		int sock_arr_index;					//统计连接到服务器的客户端个数
+		int* sockfd_array;					//用于保存连接的文件描述数组 
+		int max_client;						//最大连接数
 
+		int m_sockfd;						//启动时的套接字
+		int m_port;							//启动监听的端口
+		
+		static int buf_size;				//发送字符串的大小
 	public:
+		//无参构造
 		TcpServer();
+		/*
+		 * TcpServer(int port,int max_client)：有参构造，设置监听的端口和最大连接数
+		 * @port：监听的端口
+		 * @max_client：支持最大连接的客户端数
+		 */
+		TcpServer(int port,int max_client);
 		~TcpServer();
 
-        /*
-		 *ConnectToServer-绑定所有网卡和端口，并进入监听状态
-		 *
-		 *@port:端口号
-         *@max_client:客户端的最大连接数
-		*/
-		void BlindAndListen(int port,int max_client);
-		
-		//用于循环监听,返回监听到的套接字
-		int ConnectToClient();
+		/*
+		 *BlindAndListen - 绑定ip和端口，并进入监听状态：socket()->blind()->listen()
+		 */
+		void BlindAndListen();
 
+		/*
+		 *ConnectToClient - 用于循环监听,返回监听到的套接字: accept() ; 返回监听到的套接字，并使用client_ip记录源IP
+		 */
+		void ConnectToClient(char* client_ip,int* client_sockfd);
+
+		/*
+		 *Broadcast - 向ser的套接字数组sockfd_array中的每一个套接字发送buf信息
+		 *@sockfd : 不向此套接字发送信息。用于避免回声的现象，sockfd = 0，表示转发到所有的套接字。
+		 *@buf  ：需要发送的字符串
+		 *@buf_size：字符串长度
+		 *@ser：服务器对象指针
+		 */
+		static void Broadcast(int sockfd,char* buf, int buf_size,TcpServer* ser);
+
+		/*
+		 * ReadAndBroadcast - 读取套接字的消息，输入并将其转发到其余的客户端
+		 * @arg：Msg 结构体，保存 源信息的ip 和 套接字sockfd
+		 */
+		static void* ReadAndBroadcast(void* argv);
+
+		/*
+		 *AddSockfd - 向套接字数组中添加客户端套接字。客户端计数 sock_arr_index 加 1
+		 *@sockfd:需要插入的socket套接字
+		 */
+		void AddSockfd(int sockfd);
+
+		/*
+		 *DeleteSockfd - 在套接字数组中删除指定套接字。当客户端断开连接后，及时关闭socket套接字。
+		 *@sockfd：需要关闭的套接字
+		 */
+		static void DeleteSockfd(int sockfd,TcpServer* ser);
 };
 ```
-### 客户端线程
-在客户线程主要实现的任务是：向指定ip地址的客户端进行通信。通过创建两个线程，分别向套接字读取信息和发送信息。具体实现如下：
+### 工作程序
+在**客户线程主要实现的任务是：向指定ip地址的客户端进行通信。通过创建一个子线程，分别向套接字读取信息。主线程决定信息发送给谁。**。服务器的功能是接收连接该服务端的客户端的信息，并将其转发给连接到该服务端的其余客户端。实现的原理是：服务器线程不停的监听，当有一个客户端连接进来以后，便将该套接字保存到一个数组中。然后创建一个线程，用于实现对该套接字的读取。当有信息传入的时候，便将该消息广播到所有的套接字中去。
+具体实现如下：
 ```c++
-/*
-*Read-读取来自套接字的消息，并将其打印到终端
-*
-*@arg：socket套接字
-*/
-void* Read(void* arg){
-	int sockfd = *(int*) arg;                
-	char buf[MAXLEN] = {0}; 
-	while(read(sockfd,&buf,MAXLEN)){       
-		printf("%s",buf);
-		memset(&buf,0,MAXLEN);
-	}
-	pthread_exit(NULL);
-}
+#include "client.h"
+#include "server.h"
+
+#define PORT 8080		//定义端口
+#define MAXCLIENT 100	//定义最大连接数
 
 /*
-*Write-获取终端上的输入，并将其发送给套接字
-*
-*@arg：socket套接字
-*/
-void* Write(void* arg){
-	int sockfd = *(int *)arg;
-	char buf[MAXLEN] ={0};
-	while(fgets(buf,sizeof(buf),stdin)){
-		write(sockfd,&buf,sizeof(buf));
-		memset(&buf,0,sizeof(buf));
-	}
-	pthread_exit(NULL);
-}
-
-/*
-*IPv4_verify-验证IPv4 地址是否合法
-*
-*@ip：需要验证的IP
-*/
-bool IPv4_verify(char* ip){
-	int a,b,c,d;
-	char t;
-	if(4 == sscanf(ip,"%d.%d.%d.%d%c",&a,&b,&c,&d,&t)){
-		if(0 <= a && a <= 255 \
-				&& 0 <= b && b <= 255 \
-				&& 0 <= c && c <= 255 \
-				&& 0 <= d && d <= 255 )
-			return true;
-	}
-	return false;
-}
-/*
-*ClientWork-客户端工作线程：向服务器发起连接，比进行双工通信
-*@argv：服务器的IP，由程序启动时传入
-*/
-void* ClientWork(void* argv){
-	// 获取输入参数 ip   
-	char* ip = (char*)argv;
-	// 判断是否是合法的ip地址
-	if(IPv4_verify(ip)){
-		// 创建客户端tcp套接字 用于连接
-		TcpClient client;
-		if(client.ConnectToServer(ip,PORT)){
-			pthread_t tid[2];
-			//读写线程
-			pthread_create(&tid[0],NULL,Read,&client.m_sockfd);
-			pthread_create(&tid[1],NULL,Write,&client.m_sockfd);
-			//等待线程结束，回收资源
-			pthread_join(tid[0],NULL);
-			pthread_join(tid[1],NULL);
+ *ClientWork-客户端工作线程：向服务器发起连接，并进行双工通信
+ **@argv：服务器的IP，由程序启动时传入
+ */
+void ClientWork(char* ip,TcpClient* cli){
+	//1.判断ip地址是否合法
+	if(cli->IPv4_verify(ip)){
+		//2.创建客户端tcp套接字 用于连接
+		cli->m_ip = ip; 
+		if(cli->ConnectToServer()){
+			pthread_t tid;
+			//创建线程
+			pthread_create(&tid,NULL,TcpClient::Read,&cli->m_sockfd);
+			//分离线程
+			pthread_detach(tid);
 		}else{
-			printf("connect to %s:%d failed\n",ip,PORT);
+			printf("connect to %s:%d failed\n",cli->m_ip,cli->m_port);
 		}
 	}else{
 		printf("请输入合法的IP地址: 如 ./app 10.82.242.131 \n");
-	} 
-	pthread_exit(0); 
-}
-```
-### 服务端线程
-服务器的功能是接收连接该服务端的客户端的信息，并将其转发给连接到该服务端的其余客户端。实现的原理是：服务器线程不停的监听，当有一个客户端连接进来以后，便将该套接字保存到一个数组中。然后创建一个线程，用于实现对该套接字的读取。当有信息传入的时候，便将该消息广播到所有的套接字中去。具体实现如下：
-```c++
-//创建读写锁，用于维护socket数组
-pthread_rwlock_t sockfd_rwlock;
-//记录连接到服务器的客户端套接字
-int sock_arr_index = 0;			//连接到服务器线程的客户端个数
-int sockfd_array[MAXCLIENT]={0};//初始化为0
-
-//需要发送的数据结构体包含需要发送的套接字、当前电脑的ip
-struct Msg{
-	int sockfd;  //套接字
-	char *ip;	 // ip地址
-	Msg(int fd,char* str):sockfd(fd),ip(str){}
-};
-
-/* 
-*Broadcast - 对sockfd_array所维护的套接字数组进行发送信息
-*
-*@sockfd：socket 套接字，表示不对此套接字进行发送信息
-*@buf：需要发送的字符串
-*@str_size：字符串的大小
-*/
-void Broadcast(int sockfd,char* buf, int str_size){
-	//请求读锁
-	pthread_rwlock_rdlock(&sockfd_rwlock);
-	//向除了 sockdf 的以外的服务器进行转发
-	for(int i = 0 ; i < sock_arr_index; i++){
-		if(*(sockfd_array + i) != sockfd && *(sockfd_array + i)  > 0)
-			write(*(sockfd_array + i),buf,str_size);
 	}
-	//释放读锁
-	pthread_rwlock_unlock(&sockfd_rwlock);
 }
 
 /*
-* DeleteSockfd - 删除sockfd_array数组中的 sockfd 这个套接字。当客户端断开连接后，要及时释放套接字
-*
-*@sockfd：需要删除的套接字
-*/
-void DeleteSockfd(int sockfd){
-	//请求写锁
-	pthread_rwlock_wrlock(&sockfd_rwlock);
-	for(int i = 0 ; i < sock_arr_index ; i++){
-		if(*(sockfd_array + i)  == sockfd){
-			close(*(sockfd_array + i));
-			//用最后一个文件描述符覆盖这个文件描述符，并将最后一个文件描述符置0;
-			sock_arr_index = sock_arr_index - 1;
-			*(sockfd_array + i)  = *(sockfd_array + sock_arr_index);
-			*(sockfd_array + sock_arr_index)= 0;
-			break;
-		}
-	}
-	//释放写锁
-	pthread_rwlock_unlock(&sockfd_rwlock);
-}
-
-/*
-*AddSockfd - 向套接字数组sockfd_array中 添加套接字
-*
-*@sockfd：socket 套接字
-*/
-void AddSockfd(int sockfd){
-	//请求写锁
-	pthread_rwlock_wrlock(&sockfd_rwlock);
-    //插入套接字，计数+1
-	*(sockfd_array + sock_arr_index) = sockfd;
-	sock_arr_index++;
-	//释放写锁
-	pthread_rwlock_unlock(&sockfd_rwlock);
-}
-
-//读取套接字的信息，并进行广播
-void* ReadAndBroadcast(void *arg){
-	//结构体中保存的是套接字和客户端ip
-	struct Msg* msg = (struct Msg*)arg;
-	int sockfd      = msg->sockfd;
-	char ip[15]     = {0};
-	strcpy(ip,msg->ip);
-
-	//收发字符串
-	char read_buf[MAXLEN]  = {0};
-	char send_buf[2*MAXLEN]= {0};
-
-	//添加时间信息
+ *ServerWork - 开启服务器，并监听连接。当有客户端时，就创建一个线程，用于接受并转发
+ *@argv：TcpServer对象 
+ */
+void* ServerWork(void* argv){
+	//构建服务器对象:设置端口和最大连接数
+	TcpServer *ser =(TcpServer*) argv;
+	
+	//监听任意网口
+	ser->BlindAndListen();
+	int client_sockfd = 0;
+	char client_ip[15] = {0};
+	
+	//输出时间信息
 	time_t cur;
 	struct tm *timeinfo;
-	time(&cur);
-	timeinfo = localtime(&cur);
-	printf("%s%s 加入了连接\n",asctime(timeinfo),ip);
 
-	//读取信息
-	while(read(sockfd,&read_buf,MAXLEN)){
-		//获取时间信息
-		time(&cur);
-		timeinfo = localtime(&cur);
-		printf("%s%s:%s\n",asctime(timeinfo),ip,read_buf);
-
-		//2.转发读到的信息到所有连接到的客户端
-		sprintf(send_buf,"%s%s:%s",asctime(timeinfo),ip,read_buf);
-		Broadcast(sockfd,send_buf,sizeof(send_buf));
-		memset(&read_buf,0,sizeof(read_buf));
-		memset(&send_buf,0,sizeof(send_buf));
-	}
-	time(&cur);
-	timeinfo = localtime(&cur);
-	printf("%s %s: 断开了连接\n",asctime(timeinfo),ip);
-
-    //关闭套接字
-	DeleteSockfd(sockfd);
-	delete msg;
-	msg = NULL;
-	pthread_exit(NULL);
-}
-
-
-//服务器工作线程
-void* ServerWork(void* arg){
-	//初始化读写锁
-	pthread_rwlock_init(&sockfd_rwlock,NULL);
-
-	//创建服务器对象
-	TcpServer server;
-	server.BlindAndListen(PORT,MAXCLIENT);
-
-    //通信的套接字
-	int client_sockfd;
-
-    //循环监听
-	while(client_sockfd = server.AcceptClient()){
-		if(sock_arr_index >= (int) MAXCLIENT){
+	//获取客户端的 ip和套接字
+	while(ser->ConnectToClient(client_ip,&client_sockfd)){
+		if(ser->sock_arr_index >= ser->max_client){
 			printf("超过最大连接数！\n");
 			break;
 		}
-
 		//将新的连接添加进套接字数组中
-		AddSockfd(client_sockfd);
+		ser->AddSockfd(client_sockfd);
 
-		//创建工作线程，传入套接字 和 ip
+		//提示有客户端连接
+		time(&cur);
+		timeinfo = localtime(&cur);
+		printf("%s%s 加入了连接 %d\n",asctime(timeinfo),client_ip,client_sockfd);
+
+		//创建工作线程
 		pthread_t tid;
-		pthread_create(&tid,NULL,ReadAndBroadcast,new Msg(server.client_sockfd,server.client_ip));
+		pthread_create(&tid,NULL,TcpServer::ReadAndBroadcast,new Msg(client_sockfd,client_ip,ser));
+		pthread_detach(tid);
+
+		//清空ip
+		memset(client_ip,0,sizeof(client_ip));
+	}
+	exit(0);
+}
+
+void Work(int argc,char argv[]){
+	//实例化服务器对象和客户端对象
+	TcpClient *cli = new TcpClient((int) PORT);
+	TcpServer *ser = new TcpServer((int) PORT,(int) MAXCLIENT);	
+
+	//需要创建服务器	
+	if(argc <= 2){
+		pthread_t tid;
+		pthread_create(&tid,NULL,ServerWork,ser);
 		pthread_detach(tid);
 	}
-	//销毁读写锁
-	pthread_rwlock_destroy(&sockfd_rwlock);
-	pthread_exit(NULL);
+
+	//创建客户端
+	if(argc >=2 )
+		ClientWork(argv[1],cli);
+
+	//读取控制台输入
+	char buf[512]={0};
+	memset(buf,0,sizeof(buf));
+	while(fgets(buf,sizeof(buf),stdin)){
+		//向服务器发消息
+		cli->Write(buf,sizeof(buf));
+
+		//向所有客户端发消息:编写发送的内容
+		if(ser->sock_arr_index > 0){
+			time_t cur;
+			time(&cur);
+			struct tm* timeinfo = localtime(&cur);
+			char broadcast_buf[1024];
+
+			sprintf(broadcast_buf,"%s message for server:%s",asctime(timeinfo),buf);
+			TcpServer::Broadcast(0,broadcast_buf,sizeof(broadcast_buf),ser);
+		}
+		memset(buf,0,sizeof(buf));
+	}
+	delete cli;
+	delete ser;
+	return;
 }
 ```
+
