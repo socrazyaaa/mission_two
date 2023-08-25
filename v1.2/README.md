@@ -91,7 +91,7 @@ class TcpClient{
 		char* m_ip;			      // 服务器IP地址
 	public:
 		TcpClient();
-		TcpClient(int port);//初始化端口
+		TcpClient(int port);	  //初始化端口
 		~TcpClient();
 
 		/*
