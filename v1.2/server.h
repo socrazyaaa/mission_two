@@ -14,9 +14,9 @@
 
 class TcpServer;
 
-//需要发送的数据结构体包含需要发送的套接字、当前电脑的ip
+//需要发送的数据结构体包含需要发送的套接字、消息源的ip
 struct Msg{
-	int sockfd;  //套接字
+	int sockfd;      //套接字
 	char ip[15];	 // ip地址
 	TcpServer* ser;
 	Msg(int fd,char* str,TcpServer* ser):sockfd(fd),ser(ser){
