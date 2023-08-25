@@ -6,7 +6,8 @@
 
 /*
  *ClientWork-客户端工作线程：向服务器发起连接，并进行双工通信
- **@argv：服务器的IP，由程序启动时传入
+ *@ip：服务器的IP，由程序启动时传入
+ *@cli：客户端对象
  */
 void ClientWork(char* ip,TcpClient* cli){
 	//1.判断ip地址是否合法
