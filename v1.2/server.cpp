@@ -157,8 +157,8 @@ void* TcpServer::ReadAndBroadcast(void *arg){
 	//时间
 	time_t cur;
 	struct tm *timeinfo;
+	
 	//读取信息
-	int ret = read(sockfd,read_buf,buf_size);
 	while(read(sockfd,read_buf,buf_size)){
 		//获取时间信息
 		time(&cur);
@@ -188,48 +188,4 @@ void* TcpServer::ReadAndBroadcast(void *arg){
 	msg = NULL;
 	pthread_exit(NULL);
 }
-
-/*
- *ServerWork - 开启服务器，并监听连接。当有客户端时，就创建一个线程，用于接受并转发
- *@argv：NULL 不需要传递参数
- */
- /*
-void* TcpServer::ServerWork(void* argv){
-	
-	//初始化读写锁
-	pthread_rwlock_init(&sockfd_rwlock,NULL);
-	sockfd_array  = (int*) malloc(max_client * sizeof(int));
-
-	//全部初始化为0. debug一下
-	memset(sockfd_array,0,max_client * sizeof(int));
-	//debug结束
-
-	BlindAndListen();//监听任意网口
-	int client_sockfd;
-	while(client_sockfd = ConnectToClient()){
-		if(sock_arr_index >= max_client){
-			printf("超过最大连接数！\n");
-			break;
-		}
-		//将新的连接添加进套接字数组中
-		AddSockfd(client_sockfd);
-
-		//提示有客户端连接
-		time_t cur;
-		struct tm *timeinfo;
-		time(&cur);
-		timeinfo = localtime(&cur);
-		printf("%s%s 加入了连接\n",asctime(timeinfo),client_ip);
-
-		//创建工作线程
-		pthread_t tid;
-		pthread_create(&tid,NULL,ReadAndBroadcast,new Msg(client_sockfd,client_ip));
-		pthread_detach(tid);
-	}
-	//销毁读写锁
-	pthread_rwlock_destroy(&sockfd_rwlock);
-	exit(0);
-}
-*/
-
 
