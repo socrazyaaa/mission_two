@@ -1,0 +1,95 @@
+#ifndef _SERVER_H
+#define _SERVER_H
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <arpa/inet.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <errno.h>
+#include <signal.h>
+#include <pthread.h>
+
+class TcpServer;
+
+//需要发送的数据结构体包含需要发送的套接字、当前电脑的ip
+struct Msg{
+	int sockfd;  //套接字
+	char ip[15];	 // ip地址
+	TcpServer* ser;
+	Msg(int fd,char* str,TcpServer* ser):sockfd(fd),ser(ser){
+		memset(ip,0,sizeof(ip));
+		strcpy(ip,str);
+	}
+};
+
+class TcpServer{
+	public:
+		pthread_rwlock_t sockfd_rwlock;		//读写锁:用于维护连接到服务器的客户端套接字
+		int sock_arr_index;					//统计连接到服务器的客户端个数
+		int* sockfd_array;					//用于保存连接的文件描述数组 
+		int max_client;	    				//最大连接数
+
+		int m_sockfd;				        //启动时的套接字
+		int m_port;				            //启动监听的端口
+		
+		static int buf_size;				//发送字符串的大小
+	public:
+		//无参构造
+		TcpServer();
+		//有参构造
+		TcpServer(int port,int max_client);
+		/*
+		 * TcpServer(int port,int max_client)：有参构造，设置监听的端口和最大连接数
+		 * @port：监听的端口
+		 * @max_client：支持最大连接的客户端数
+		 */
+		~TcpServer();
+
+		/*
+		 *BlindAndListen - 绑定ip和端口，并进入监听状态：socket()->blind()->listen()
+		 */
+		void BlindAndListen();
+
+		/*
+		 *ConnectToClient - 用于循环监听,返回监听到的套接字: accept() ; 返回监听到的套接字，并使用client_ip记录源IP
+		 */
+		bool ConnectToClient(char* client_ip,int* client_sockfd);
+
+		/*
+		 *Broadcast - 向套接字数组sockfd_array中的每一个套接字发送buf信息
+		 *@sockfd : 不向此套接字发送信息。用于避免回声的现象，sockfd = 0，表示转发到所有的套接字。
+		 *@buf  ：需要发送的字符串
+		 *@buf_size：字符串长度
+		 */
+		static void Broadcast(int sockfd,char* buf, int buf_size,TcpServer* ser);
+
+		/*
+		 * ReadAndBroadcast - 读取套接字的消息，输入并将其转发到其余的客户端
+		 * @arg：Msg 结构体，保存 源信息的ip 和 套接字sockfd
+		 */
+		static void* ReadAndBroadcast(void* argv);
+
+		/*
+		 *ServerWork - 开启服务器，并监听连接。当有客户端时，就创建一个线程，用于接受并转发
+		 *@argv：NULL 不需要传递参数
+		 */
+		//static void* ServerWork(void* argv);
+
+		/*
+		 *AddSockfd - 向套接字数组中添加客户端套接字。客户端计数 sock_arr_index 加 1
+		 *@sockfd:需要插入的socket套接字
+		 */
+		void AddSockfd(int sockfd);
+
+		/*
+		 *DeleteSockfd - 在套接字数组中删除指定套接字。当客户端断开连接后，及时关闭socket套接字。
+		 *@sockfd：需要关闭的套接字
+		 */
+		static void DeleteSockfd(int sockfd,TcpServer* ser);
+};
+
+
+#endif //_SERVER_H
