@@ -56,7 +56,7 @@ void* ServerWork(void* argv){
 		//提示有客户端连接
 		time(&cur);
 		timeinfo = localtime(&cur);
-		printf("%s%s 加入了连接 %d\n",asctime(timeinfo),client_ip,client_sockfd);
+		printf("%s---------\t%s\t加入了连接-----------\n",asctime(timeinfo),client_ip);
 
 		//创建工作线程
 		pthread_t tid;
@@ -100,7 +100,7 @@ void Work(int argc,char *argv[]){
 			struct tm* timeinfo = localtime(&cur);
 			char broadcast_buf[1024];
 			//拼接时间信息
-			sprintf(broadcast_buf,"%smessage for server:   %s",asctime(timeinfo),buf);
+			sprintf(broadcast_buf,"%sserver broadcast:%s\n",asctime(timeinfo),buf);
 			//进行广播
 			TcpServer::Broadcast(0,broadcast_buf,sizeof(broadcast_buf),ser);
 			memset(broadcast_buf,0,sizeof(broadcast_buf));

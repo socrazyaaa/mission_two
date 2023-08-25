@@ -163,10 +163,11 @@ void* TcpServer::ReadAndBroadcast(void *arg){
 		//获取时间信息
 		time(&cur);
 		timeinfo = localtime(&cur);
-		printf("%s%s:%s\n",asctime(timeinfo),ip,read_buf);
-
+		printf("%s%s:%s",asctime(timeinfo),ip,read_buf);
+	
 		//2.转发读到的信息到所有连接到的客户端
-		sprintf(send_buf,"%s%s:%s",asctime(timeinfo),ip,read_buf);
+		sprintf(send_buf,"%s%s:%s \n",asctime(timeinfo),ip,read_buf);
+		//printf("要进行转发的消息\"%s\"\n",send_buf);
 		Broadcast(sockfd,send_buf,2 * buf_size,msg->ser);
 
 		//3.清0
