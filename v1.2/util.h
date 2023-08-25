@@ -66,9 +66,10 @@ void* ServerWork(void* argv){
 		//清空ip
 		memset(client_ip,0,sizeof(client_ip));
 	}
+	pthread_exit(NULL);
 }
 
-void Work(int argc,char *argv){
+void Work(int argc,char *argv[]){
 	//实例化服务器对象和客户端对象
 	TcpClient *cli = new TcpClient((int) PORT);
 	TcpServer *ser = new TcpServer((int) PORT,(int) MAXCLIENT);	
@@ -88,17 +89,19 @@ void Work(int argc,char *argv){
 	char buf[512]={0};
 	memset(buf,0,sizeof(buf));
 	while(fgets(buf,sizeof(buf),stdin)){
-		//向服务器发消息
-		cli->Write(buf,sizeof(buf));
+		//向服务器发消息:可自定义什么情况下向服务器发消息
+		if(cli->m_sockfd > 0)
+			cli->Write(buf,sizeof(buf));
 
-		//向所有客户端发消息:编写发送的内容
+		//向所有客户端发消息:编写发送的内容。可自定义什么情况下向服务器发消息
 		if(ser->sock_arr_index > 0){
 			time_t cur;
 			time(&cur);
 			struct tm* timeinfo = localtime(&cur);
 			char broadcast_buf[1024];
-
-			sprintf(broadcast_buf,"%smessage for server:%s",asctime(timeinfo),buf);
+			//拼接时间信息
+			sprintf(broadcast_buf,"%smessage for server:   %s",asctime(timeinfo),buf);
+			//进行广播
 			TcpServer::Broadcast(0,broadcast_buf,sizeof(broadcast_buf),ser);
 			memset(broadcast_buf,0,sizeof(broadcast_buf));
 		}
@@ -107,3 +110,4 @@ void Work(int argc,char *argv){
 	delete cli;
 	delete ser;
 }
+
