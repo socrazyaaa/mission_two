@@ -68,7 +68,7 @@ class TcpServer{
 
 		/*
 		 * ReadAndBroadcast - 读取套接字的消息，输入并将其转发到其余的客户端
-		 * @arg：Msg 结构体，保存 源信息的ip 和 套接字sockfd
+		 * @arg：Msg 结构体，保存 源信息的ip 和 套接字sockfd 和 TcpServer对象指针
 		 */
 		static void* ReadAndBroadcast(void* argv);
 
