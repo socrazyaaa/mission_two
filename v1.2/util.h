@@ -98,8 +98,9 @@ void Work(int argc,char *argv){
 			struct tm* timeinfo = localtime(&cur);
 			char broadcast_buf[1024];
 
-			sprintf(broadcast_buf,"%s message for server:%s",asctime(timeinfo),buf);
+			sprintf(broadcast_buf,"%smessage for server:%s",asctime(timeinfo),buf);
 			TcpServer::Broadcast(0,broadcast_buf,sizeof(broadcast_buf),ser);
+			memset(broadcast_buf,0,sizeof(broadcast_buf));
 		}
 		memset(buf,0,sizeof(buf));
 	}
