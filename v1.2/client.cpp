@@ -10,7 +10,6 @@ TcpClient::~TcpClient(){
 
 /*
  *IPv4_verify-验证IPv4 地址是否合法
- *
  *@ip：需要验证的IP
  */
 bool TcpClient::IPv4_verify(char* ip){
@@ -28,7 +27,6 @@ bool TcpClient::IPv4_verify(char* ip){
 
 /*
  *ConnectToServer-向服务器发起连接
- *
  *@serverip:服务器IP地址
  *@port:端口号
  */
@@ -56,8 +54,10 @@ bool TcpClient::ConnectToServer(){
 	return true;
 }
 
-
-//读取来自套接字的消息，并将其打印到终端：@arg：套接字
+/*
+*读取来自套接字的消息，并将其打印到终端：
+*@arg：套接字
+*/
 void* TcpClient::Read(void* argv){
 	//1.获取套接字
 	int sockfd = *(int *)argv;
@@ -77,7 +77,6 @@ void* TcpClient::Read(void* argv){
 
 /*
  *Write-获取终端上的输入，并将其发送给套接字
- *
  *@buf：需要发送的内容
  *@buf_size：字符串的长度
  */
