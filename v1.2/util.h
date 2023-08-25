@@ -1,6 +1,9 @@
 #include "client.h"
 #include "server.h"
 
+#define PORT 8080		//定义端口
+#define MAXCLIENT 100	//定义最大连接数
+
 /*
  *ClientWork-客户端工作线程：向服务器发起连接，并进行双工通信
  **@argv：服务器的IP，由程序启动时传入
@@ -63,6 +66,8 @@ void* ServerWork(void* argv){
 		//清空ip
 		memset(client_ip,0,sizeof(client_ip));
 	}
+}
+
 void Work(int argc,char *argv){
 	//实例化服务器对象和客户端对象
 	TcpClient *cli = new TcpClient((int) PORT);
