@@ -50,7 +50,10 @@ void* ServerWork(void* argv){
 		if(ser->sock_arr_index >= ser->max_client){
 			printf("超过最大连接数！\n");
 
-			close(*client_sockfd);
+			//向客户端发送提示信息
+			char buf[] ="服务器连接已达上限\n";
+			write(client_sockfd,buf,sizeof(buf));
+			close(client_sockfd);
 			continue;
 		}
 		//将新的连接添加进套接字数组中
