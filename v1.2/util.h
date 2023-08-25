@@ -49,7 +49,9 @@ void* ServerWork(void* argv){
 	while(ser->ConnectToClient(client_ip,&client_sockfd)){
 		if(ser->sock_arr_index >= ser->max_client){
 			printf("超过最大连接数！\n");
-			break;
+
+			close(*client_sockfd);
+			continue;
 		}
 		//将新的连接添加进套接字数组中
 		ser->AddSockfd(client_sockfd);
