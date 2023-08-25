@@ -146,7 +146,7 @@ class TcpServer{
 		//无参构造
 		TcpServer();
 		/*
-		 * TcpServer(int port,int max_client)：有参构造，设置监听的端口和最大连接数
+		 * TcpServer(int port,int max_client) - 设置监听的端口和最大连接数
 		 * @port：监听的端口
 		 * @max_client：支持最大连接的客户端数
 		 */
@@ -174,7 +174,7 @@ class TcpServer{
 
 		/*
 		 * ReadAndBroadcast - 读取套接字的消息，输入并将其转发到其余的客户端
-		 * @arg：Msg 结构体，保存 源信息的ip 和 套接字sockfd
+		 * @arg：Msg 结构体，保存 源信息的ip 和 套接字sockfd 和 TcpServer*服务器对象指针
 		 */
 		static void* ReadAndBroadcast(void* argv);
 
