@@ -106,6 +106,3 @@ void Work(int argc,char *argv){
 	delete cli;
 	delete ser;
 }
-	exit(0);
-}
-
