@@ -48,9 +48,11 @@ void* ServerWork(void* argv){
 	//获取客户端的 ip和套接字
 	while(ser->ConnectToClient(client_ip,&client_sockfd)){
 		if(ser->sock_arr_index >= ser->max_client){
-			printf("达到连接上限！\n");
-			char buf[] = "服务器已达连接上限\n";
-			write(client_sockfd,&buf,sizeof(buf));
+			printf("超过最大连接数！\n");
+
+			//向客户端发送提示信息
+			char buf[] ="服务器连接已达上限\n";
+			write(client_sockfd,buf,sizeof(buf));
 			close(client_sockfd);
 			continue;
 		}
