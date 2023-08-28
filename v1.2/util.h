@@ -2,7 +2,7 @@
 #include "server.h"
 
 #define PORT 8080		//定义端口
-#define MAXCLIENT 100	//定义最大连接数
+#define MAXCLIENT 3	//定义最大连接数
 
 /*
  *ClientWork-客户端工作线程：向服务器发起连接，并进行双工通信
@@ -48,8 +48,11 @@ void* ServerWork(void* argv){
 	//获取客户端的 ip和套接字
 	while(ser->ConnectToClient(client_ip,&client_sockfd)){
 		if(ser->sock_arr_index >= ser->max_client){
-			printf("超过最大连接数！\n");
-			break;
+			printf("达到连接上限！\n");
+			char buf[] = "服务器已达连接上限\n";
+			write(client_sockfd,&buf,sizeof(buf));
+			close(client_sockfd);
+			continue;
 		}
 		//将新的连接添加进套接字数组中
 		ser->AddSockfd(client_sockfd);
