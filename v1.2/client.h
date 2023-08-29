@@ -14,12 +14,12 @@
 
 class TcpClient{
 	public:
-		int m_sockfd;             // 与服务器通信的套接字
-		int m_port;			      // 端口
-		char* m_ip;			      // 服务器IP地址
+		int m_sockfd;			// 与服务器通信的套接字
+		int m_port;			// 端口
+		char* m_ip;			// 服务器IP地址
 	public:
 		TcpClient();
-		TcpClient(int port);//初始化端口
+		TcpClient(int port);		//初始化端口
 		~TcpClient();
 
 		/*
