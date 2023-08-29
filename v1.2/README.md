@@ -259,7 +259,7 @@ void* ServerWork(void* argv){
 		//提示有客户端连接
 		time(&cur);
 		timeinfo = localtime(&cur);
-		printf("%s%s 加入了连接 %d\n",asctime(timeinfo),client_ip,client_sockfd);
+		printf("%s%s 加入了连接\n",asctime(timeinfo),client_ip);
 
 		//创建工作线程
 		pthread_t tid;
