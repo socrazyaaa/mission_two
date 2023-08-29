@@ -234,19 +234,25 @@ void* ServerWork(void* argv){
 	
 	//监听任意网口
 	ser->BlindAndListen();
-	int client_sockfd = 0;
-	char client_ip[15] = {0};
 	
 	//输出时间信息
 	time_t cur;
 	struct tm *timeinfo;
 
 	//获取客户端的 ip和套接字
+	char client_ip[15] = {0};
+	int client_sockfd = 0;
 	while(ser->ConnectToClient(client_ip,&client_sockfd)){
+		//连接达上限
 		if(ser->sock_arr_index >= ser->max_client){
-			printf("超过最大连接数！\n");
-			break;
+			char err_msg = "服务器连接已达上限！\n";
+			printf("%s",err_msg);
+			//向客户端发送提示信息
+			write(client_sockfd,err_msg,sizeof(err_msg));
+			close(client_sockfd);
+			continue;
 		}
+
 		//将新的连接添加进套接字数组中
 		ser->AddSockfd(client_sockfd);
 
