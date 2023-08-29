@@ -1,7 +1,7 @@
 #include "client.h"
 #include "server.h"
 
-#define PORT 8080		//定义端口
+#define PORT 8080	//定义端口
 #define MAXCLIENT 3	//定义最大连接数
 
 /*
