@@ -1,7 +1,6 @@
 #include "server.h"
 int TcpServer::buf_size = 512;
 
-
 TcpServer::TcpServer(){
 	TcpServer(8000,100);
 }
@@ -28,7 +27,7 @@ TcpServer::~TcpServer(){
 	//关闭套接字
 	if(this->m_sockfd > 0) 
 		close(this->m_sockfd);
-	//
+	//释放内存
 	free(this->sockfd_array);
 	this->sockfd_array = NULL;
 }
@@ -159,7 +158,12 @@ void* TcpServer::ReadAndBroadcast(void *arg){
 	struct tm *timeinfo;
 	
 	//读取信息
-	while(read(sockfd,read_buf,buf_size)){
+	int ret = 0;
+	while(ret = read(sockfd,read_buf,buf_size)){
+		if(ret == -1){
+			perror("read failed!\n");
+			exit(0);
+		}
 		//获取时间信息
 		time(&cur);
 		timeinfo = localtime(&cur);
