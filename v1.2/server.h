@@ -39,13 +39,12 @@ class TcpServer{
 	public:
 		//无参构造
 		TcpServer();
-		//有参构造
-		TcpServer(int port,int max_client);
 		/*
 		 * TcpServer(int port,int max_client)：有参构造，设置监听的端口和最大连接数
 		 * @port：监听的端口
 		 * @max_client：支持最大连接的客户端数
 		 */
+		TcpServer(int port,int max_client);
 		~TcpServer();
 
 		/*
