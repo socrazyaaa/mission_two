@@ -65,8 +65,13 @@ void* TcpClient::Read(void* argv){
 	//2.读取套接字内的内容
 	int buf_size = 512;
 	char *buf = (char*) malloc(buf_size * sizeof(char));
-	memset(buf,0,buf_size);                
-	while(read(sockfd,buf,buf_size)){       
+	memset(buf,0,buf_size);
+	//int ret = 0;      -1          
+	while(ret = read(sockfd,buf,buf_size)){ 
+		if(ret = -1){
+			perror("read failed!\n");
+			exit(1);
+		}   
 		printf("%s",buf);
 		memset(buf,0,buf_size);
 	}
