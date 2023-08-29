@@ -73,12 +73,6 @@ class TcpServer{
 		static void* ReadAndBroadcast(void* argv);
 
 		/*
-		 *ServerWork - 开启服务器，并监听连接。当有客户端时，就创建一个线程，用于接受并转发
-		 *@argv：NULL 不需要传递参数
-		 */
-		//static void* ServerWork(void* argv);
-
-		/*
 		 *AddSockfd - 向套接字数组中添加客户端套接字。客户端计数 sock_arr_index 加 1
 		 *@sockfd:需要插入的socket套接字
 		 */
