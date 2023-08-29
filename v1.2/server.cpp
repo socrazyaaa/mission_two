@@ -190,6 +190,7 @@ void* TcpServer::ReadAndBroadcast(void *arg){
 	free(send_buf);
 	read_buf = NULL;
 	send_buf = NULL;
+	delete msg;
 	msg = NULL;
 	pthread_exit(NULL);
 }
