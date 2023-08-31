@@ -66,9 +66,9 @@ void* TcpClient::Read(void* argv){
 	int buf_size = 512;
 	char *buf = (char*) malloc(buf_size * sizeof(char));
 	memset(buf,0,buf_size);
-	//int ret = 0;      -1          
+	int ret = 0;          
 	while(ret = read(sockfd,buf,buf_size)){ 
-		if(ret = -1){
+		if(ret == -1){
 			perror("read failed!\n");
 			exit(1);
 		}   
