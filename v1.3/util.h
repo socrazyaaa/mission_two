@@ -34,10 +34,10 @@ void ClientWork(char* ip,TcpClient* cli){
  *@argv：TcpServer对象 
  */
 void* ServerWork(void* argv){
-//1.构建服务器对象:设置端口和最大连接数
+	//1.构建服务器对象:设置端口和最大连接数
 	TcpServer *ser =(TcpServer*) argv;
 
-//2.监听任意网口
+	//2.监听任意网口
 	ser->BlindAndListen();
 	int client_sockfd = 0;
 	char client_ip[15] = {0};
@@ -46,7 +46,7 @@ void* ServerWork(void* argv){
 	time_t cur;
 	struct tm *timeinfo;
 
-//3.获取客户端的ip和套接字,并创建线程进行通信
+	//3.获取客户端的ip和套接字,并创建线程进行通信
 	while(ser->ConnectToClient(client_ip,&client_sockfd)){
 		//判断是否达到连接上限
 		if(ser->sock_arr_index >= ser->max_client){
@@ -83,19 +83,19 @@ void Work(int argc,char *argv[]){
 	//2.创建客户端，运行方式： $ ./app 127.xxx.xxx.xxx
 	if(argc >= 2){
 		cli = new TcpClient((int) PORT);
-    ClientWork(argv[1],cli);
-   }
+		ClientWork(argv[1],cli);
+	}
 
 	//3.创建服务器，运行方式：	$ ./app 或者 $ ./app 127.0.0.1
 	if(argc <= 2){
 		pthread_t tid;
-    ser = new TcpServer((int) PORT,(int) MAXCLIENT)
-		pthread_create(&tid,NULL,ServerWork,ser);
+		ser = new TcpServer((int) PORT,(int) MAXCLIENT)
+			pthread_create(&tid,NULL,ServerWork,ser);
 		pthread_detach(tid);
 	}
- 
+
 	//4.读取控制台输入,并进行相应的操作
-  printf("请按以下格式输入需要执行的任务\n@server:xxxxx\t@client:xxxxx\t@fileTransfer:xxxxx\n");
+	printf("请按以下格式输入需要执行的任务\n@server:xxxxx\t@client:xxxxx\t@fileTransfer:xxxxx\n");
 	char buf[(int)FGETS_SIZE]={0};
 	while(fgets(buf,sizeof(buf),stdin)){
 		char* ptr = strtok(buf,":");
@@ -131,12 +131,12 @@ void Work(int argc,char *argv[]){
 				printf("没有客户端连接到本服务器\n");
 				continue;
 			}
-      //拼接时间信息
+			//拼接时间信息
 			time_t cur;
 			time(&cur);
 			struct tm* timeinfo = localtime(&cur);
 			char broadcast_buf[512] = {0};
-      ptr = strtok(NULL,":");
+			ptr = strtok(NULL,":");
 			sprintf(broadcast_buf,"%sserver broadcast:%s\n",asctime(timeinfo),ptr);
 			//进行广播
 			TcpServer::Broadcast(0,broadcast_buf,sizeof(broadcast_buf),ser);
