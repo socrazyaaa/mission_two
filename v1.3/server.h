@@ -12,8 +12,8 @@
 #include <signal.h>
 #include <pthread.h>
 
-#define BUF_SIZE 4*1024 //每次发送4k的数据
-
+#define RECEIVE_BUF_SIZE 4*1024		//传输文件，每次接受4k的数据
+#define CHAT_BUF_SIZE 512			//聊天时的buf大小
 class TcpServer;
 
 //需要发送的数据结构体包含需要发送的套接字、消息源的ip
@@ -71,7 +71,7 @@ class TcpServer{
 		 * ReadAndBroadcast - 读取套接字的消息，输入并将其转发到其余的客户端
 		 * @arg：Msg 结构体，保存 源信息的ip 和 套接字sockfd 和 TcpServer对象指针
 		 */
-		static void* ReadAndBroadcast(void* argv);
+		static void* Read(void* argv);
 
 		/*
 		 *AddSockfd - 向套接字数组中添加客户端套接字。客户端计数 sock_arr_index 加 1
@@ -89,15 +89,23 @@ class TcpServer{
 		*SaveFileformClient - 接受套接字发送的文件
 		*@sockfd：套接字信息
 		*/
-		void SaveFileformClient(int sockfd);
+		static void SaveFilefromClient(int sockfd);
 
 		/*
 		*getSaveFileName - 找到一个不存在的文件名字,将文件保存在./download 文件夹下
 		*@file_name:文件名字
 		*/
-		void getSaveFileName(char* file_name);
+		static void GetSaveFileName(char* file_name);
+
+		/*
+ 		*saveFile - 保存套接字传过来的文件
+ 		*@sockfd:套接字
+		*@save_path：保存的路径
+		*@file_size：文件的大小
+ 		*/
+		static void SaveFile(int sockfd,char* save_path,long int file_size);
+
 };
 
 
 #endif //_SERVER_H
-

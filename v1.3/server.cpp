@@ -1,5 +1,7 @@
 #include "server.h"
-int TcpServer::buf_size = 512;
+#include <sys/stat.h>
+
+//int TcpServer::buf_size = 512;
 
 TcpServer::TcpServer(){
 	TcpServer(8000,100);
@@ -25,13 +27,11 @@ TcpServer::~TcpServer(){
 	//销毁读写锁
 	pthread_rwlock_destroy(&sockfd_rwlock);
 	//关闭套接字
-	if(this->m_sockfd > 0) 
-		close(this->m_sockfd);
+	if(this->m_sockfd > 0) close(this->m_sockfd);
 	//释放内存
 	free(this->sockfd_array);
 	this->sockfd_array = NULL;
 }
-
 
 /*
  *BlindAndListen - 绑定ip和端口，并进入监听状态：socket()->blind()->listen()
@@ -51,6 +51,8 @@ void TcpServer::BlindAndListen(){
 	addr.sin_addr.s_addr = INADDR_ANY; 			//监听所有网口
 
 	//3.将套接字和IP、端口绑定
+	int opt=1;
+	setsockopt(m_sockfd,SOL_SOCKET,SO_REUSEADDR,&opt,sizeof(opt));
 	int ret = bind(m_sockfd, (struct sockaddr*)&addr, sizeof(addr));
 	if(ret != 0 ){
 		perror("bind port error!\n");
@@ -110,7 +112,7 @@ void TcpServer::DeleteSockfd(int sockfd,TcpServer* ser){
 			//用最后一个文件描述符覆盖这个文件描述符，并将最后一个文件描述符置0;
 			ser->sock_arr_index = ser->sock_arr_index - 1;
 			*(ser->sockfd_array + i)  = *(ser->sockfd_array + ser->sock_arr_index);
-			*(ser->sockfd_array + ser->sock_arr_index)= 0;
+			*(ser->sockfd_array + ser->sock_arr_index) = 0;
 			break;
 		}
 	}
@@ -136,11 +138,95 @@ void TcpServer::Broadcast(int sockfd,char* buf, int buf_size,TcpServer* ser){
 	pthread_rwlock_unlock(&ser->sockfd_rwlock);
 }
 
+
 /*
- * ReadAndBroadcast - 读取套接字的消息，输入并将其转发到其余的客户端
- * @arg：Msg 结构体，保存 源信息的ip 和 套接字sockfd
+ *getSaveFileName - 找到一个不存在的文件名字,将文件保存在./download。文件夹下
+ *@file_name:文件名字
  */
-void* TcpServer::ReadAndBroadcast(void *arg){
+void TcpServer::GetSaveFileName(char* file_name){
+	//1.判断download文件夹是否存在
+	const char* download_folder="./download";
+	struct stat st ={0};
+	//若文件夹不存咋，则创建文件
+	if(stat(download_folder,&st)== -1 )
+		mkdir(download_folder,0777);
+
+	//2.选择一个合适的保存名字，避免重名造成的影响。
+	char new_name[150]={0};
+	sprintf(new_name,"%s/%s",download_folder,file_name);
+	int version = 0;
+	//若文件已经存在，则重新取一个名字
+	while(access(new_name, F_OK) == 0)
+		sprintf(new_name,"%s/%s(%d)",download_folder,file_name,version++);
+	memset(file_name,0,strlen(file_name)+1);
+	strcpy(file_name,new_name);
+}
+
+/*
+ *saveFile - 保存套接字传过来的文件
+ *@sockfd:套接字
+ *@save_path：保存的路径
+ *@file_size：文件的大小
+ */
+void TcpServer::SaveFile(int sockfd,char* save_path,long int file_size){
+	//1.创建文件：以写的方式创建二进制文件
+	FILE* save_file_ptr = fopen(save_path,"wb+");
+	if(save_file_ptr == NULL){
+		perror("save file error!");
+		exit(1);
+	}
+	//2.循环读取文件大小的数据
+	long int total_receive = 0;
+	char buf[(int)RECEIVE_BUF_SIZE]={0};
+	int ret_r,ret_w;
+	while(total_receive < file_size){
+		ret_r = read(sockfd,buf,(int)RECEIVE_BUF_SIZE);	
+		if(ret_r < 0){
+			perror("read error!");
+			exit(1);
+		}
+		ret_w = fwrite(buf,ret_r,1,save_file_ptr);
+		if(ret_w != 1){
+			perror("fwrite error!");
+			exit(1);
+		}
+		total_receive += ret_r;
+		printf("write %d bytes,total write %ld/%ld bytes\n",ret_r,total_receive,file_size);
+	}
+	fclose(save_file_ptr);
+}
+
+/*
+ *SaveFileformClient - 接受套接字发送的文件
+ *@sockfd：套接字信息
+ */
+void TcpServer::SaveFilefromClient(int sockfd){
+	//1.读取客户端发过来的文件信息：名字和大小
+	char file_msg[150]={0};
+	int ret  = read(sockfd,&file_msg,sizeof(file_msg));
+	if(ret < 0){
+		perror("read message failed");
+		exit(1);
+	}
+	//获取文件信息及大小:例如客户端发来的消息为  filemsg,util.h,5540
+	char *file_info[3];
+	char* ptr = strtok(file_msg,",");
+	for(int i=0;i<3;i++){
+		file_info[i] = ptr;
+		ptr = strtok(NULL,",");
+	}
+	//2.开始写入文件
+	if(strcmp(file_info[0],"filemsg") == 0){
+		long int file_size = atol(file_info[2]);	//文件大小
+		printf("start recevie file\nfile name:%s \tfile size:%ld\n",file_info[1],file_size);
+		GetSaveFileName(file_info[1]);				//获取一个保存路径
+		SaveFile(sockfd,file_info[1],file_size);	//sockfd从读取file_size的内容，保存到file_info[1]路径下
+		printf("file saved to %s successfully\n",file_info[1]);
+	}
+	pthread_exit(NULL);
+}
+
+void* TcpServer::Read(void *arg){
 	//结构体中保存的是套接字和客户端ip
 	struct Msg* msg = (struct Msg*)arg;
 	int sockfd      = msg->sockfd;
@@ -148,109 +234,48 @@ void* TcpServer::ReadAndBroadcast(void *arg){
 	strcpy(ip,msg->ip);
 
 	//收发字符串
-	char* read_buf = (char*) malloc(buf_size * sizeof(char));
-	char* send_buf = (char*) malloc(2 * buf_size * sizeof(char));
-	memset(read_buf,0,buf_size);
-	memset(send_buf,0,2 * buf_size);
+	char read_buf[(int) CHAT_BUF_SIZE] = {0};
+	char send_buf[2 * (int)CHAT_BUF_SIZE] = {0};
 
 	//时间
 	time_t cur;
 	struct tm *timeinfo;
-	
+
 	//读取信息
 	int ret = 0;
-	while(ret = read(sockfd,read_buf,buf_size)){
+	while((ret = read(sockfd,read_buf,(int) CHAT_BUF_SIZE)) > 0){
+		if(strlen(read_buf) == 0)	continue;
 		if(ret == -1){
 			perror("read failed!\n");
 			exit(0);
 		}
-		//获取时间信息
-		time(&cur);
-		timeinfo = localtime(&cur);
-		printf("%s%s:%s",asctime(timeinfo),ip,read_buf);
-	
-		//2.转发读到的信息到所有连接到的客户端
-		sprintf(send_buf,"%s%s:%s \n",asctime(timeinfo),ip,read_buf);
-		//printf("要进行转发的消息\"%s\"\n",send_buf);
-		Broadcast(sockfd,send_buf,2 * buf_size,msg->ser);
+		if((strlen(read_buf) >= 12) && strncmp(read_buf,"fileTransmit",12) == 0){
+			SaveFilefromClient(sockfd);
+		}else{
+			//获取时间信息
+			time(&cur);
+			timeinfo = localtime(&cur);
+			printf("%s%s:%s",asctime(timeinfo),ip,read_buf);
 
+			//2.转发读到的信息到所有连接到的客户端
+			sprintf(send_buf,"%s%s:%s \n",asctime(timeinfo),ip,read_buf);
+			//printf("要进行转发的消息\"%s\"\n",send_buf);
+			Broadcast(sockfd,send_buf,2 * (int)CHAT_BUF_SIZE,msg->ser);
+		}
 		//3.清0
-		memset(read_buf,0,buf_size);
-		memset(send_buf,0,2 * buf_size);
+		memset(read_buf,0,(int)CHAT_BUF_SIZE);
+		memset(send_buf,0,2 * (int)CHAT_BUF_SIZE);
 	}
 
 	//客户端断开连接
 	time(&cur);
 	timeinfo = localtime(&cur);
-	printf("%s %s: 断开了连接\n",asctime(timeinfo),ip);
+	printf("%s---------\t%s 断开了连接\t-----------\n",asctime(timeinfo),ip);
 
 	//关闭套接字
 	DeleteSockfd(sockfd,msg->ser);
-	free(read_buf);
-	free(send_buf);
-	read_buf = NULL;
-	send_buf = NULL;
 	delete msg;
 	msg = NULL;
 	pthread_exit(NULL);
 }
 
-/*
-*getSaveFileName - 找到一个不存在的文件名字,将文件保存在./download。文件夹下
-*@file_name:文件名字
-*/
-void TcpServer::getSaveFileName(char* file_name){
-	char new_name[100]={0};
-	//2.转发读到的信息到所有连接到的客户端
-	sprintf(new_name,"./download/%s",file_name);
-	int version = 0;
-	while(access(new_name, F_OK) == 0)
-		sprintf(new_name,"./download/%s(%d)",file_name,version++);
-	memset(file_name,0,strlen(file_name)+1);
-	strcpy(file_name,new_name);
-}
-
-/*
-*SaveFileformClient - 接受套接字发送的文件
-*@sockfd：套接字信息
-*/
-void TcpServer::SaveFileformClient(int sockfd){
-//1.读取客户端发过来的文件信息：名字和大小
-	char file_msg[200]={0};
-	int ret  = read(sockfd,&file_msg,sizeof(file_msg));
-	if(ret < 0){
-		perror("read message failed");
-		exit(1);
-	}
-	//设置文件信息
-	char* file_name,*temp1,*temp2;
-	long file_size;
-	//file_msg="Uploadfile name:xxxxx\nUploadfile size:xxxxx"
-	sscanf(file_msg,"%s:%s\n%s:%ld",temp1,file_name,temp2,&file_size);
-//2.开始写入文件
-	if(strcmp(temp1,"Uploadfile name") && strcmp(temp2,"Uploadfile size")){
-		printf("begin to recevie file from client:\n");
-		getSaveFileName(file_name);
-		FILE* save_file_ptr = fopen(file_name,"wb");
-		if(save_file_ptr == NULL){
-			perror("save file error!");
-			exit(1);
-		}
-		char buf[4*1024]={0};//一次读取4k的内容；
-		while(ret = read(sockfd,&buf,BUF_SIZE)){
-			if(ret < 0){
-				perror("read error!");
-				exit(1);
-			}
-			if(fwrite(buf,sizeof(char),ret/sizeof(char),save_file_ptr) < ret){
-				perror("fwrite error!");
-				exit(1);
-			}
-		}
-		fclose(save_file_ptr);
-		printf("file saved to %s",file_name);
-	}else{
-		
-	}
-
-}

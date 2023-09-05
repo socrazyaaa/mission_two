@@ -7,13 +7,13 @@
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <sys/socket.h>
+#include <sys/stat.h>//stat()
 #include <netinet/in.h>
 #include <pthread.h>
 #include <errno.h>
 #include<libgen.h>	//basename()
 
-#define FILE_NAME_LEN 100
-#define BUF_SIZE 	4*1024		//传输文件，每次发送4k的数据
+#define SEND_BUF_SIZE 	4*1024		//传输文件，每次发送4k的数据
 
 class TcpClient{
 	public:
@@ -35,7 +35,7 @@ class TcpClient{
 		/*
 		 *Read-读取来自套接字的消息，并将其打印到终端
 		 *
-		 *@arg：socket套接字
+		 *@arg：客户端对象
 		 */
 		static void* Read(void* arg);
 
@@ -45,27 +45,20 @@ class TcpClient{
 		 *@buf：需要发送的内容
 		 *@buf_size：字符串的长度
 		 */
-		int Write(char* buf,int buf_size);
+		int Write(const char* buf,int buf_size);
 
 		/*
 		 *ConnectToServer-向服务器 m_ip:m_port 发起连接
 		 */
 		bool ConnectToServer();
-
-		/*
-		*UploadFile()-向服务器 上传文件
-		*
-		*@file_name:需要上传的文件名字
-		*@file_path:文件的绝对路径
-		*/
-		void UploadFile(char* file_path,char* file_name);
 		
 		/*
 		*UploadFileInfo - 告诉服务器 文件名字 及 文件大小
 		*
 		*@full_file_name：含有路径的文件名 C:\Users\Administrator\Desktop\最终版本\v1.2\client.cpp
+		*返回值：文件的大小
 		*/
-		void UploadFileInfo(char* full_file_name);
+		long UploadFileInfo(char* full_file_name);
 
 		/*
 		*UploadFile()-向服务器 上传文件
@@ -76,4 +69,3 @@ class TcpClient{
 
 };
 #endif   //_TCPCLIENT_H
-

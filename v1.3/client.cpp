@@ -1,8 +1,8 @@
 #include "client.h"
+#include<sys/stat.h>
 
 TcpClient::TcpClient():m_sockfd(0),m_port(8000){};
 TcpClient::TcpClient(int port):m_sockfd(0),m_port(port){};
-
 TcpClient::~TcpClient(){
 	if( this->m_sockfd != 0) 
 		close(this->m_sockfd);
@@ -55,28 +55,32 @@ bool TcpClient::ConnectToServer(){
 }
 
 /*
-*读取来自套接字的消息，并将其打印到终端：
-*@arg：套接字
-*/
+ *读取来自套接字的消息，并将其打印到终端：
+ *@arg：客户端对象
+ */
 void* TcpClient::Read(void* argv){
-	//1.获取套接字
-	int sockfd = *(int *)argv;
+	//1.获取客户端对象
+	TcpClient* cli = (TcpClient *)argv;
 
 	//2.读取套接字内的内容
 	int buf_size = 512;
 	char *buf = (char*) malloc(buf_size * sizeof(char));
-	memset(buf,0,buf_size);
-	int ret = 0;       
-	while(ret = read(sockfd,buf,buf_size)){ 
-		if(ret = -1){
-			perror("read failed!\n");
+	memset(buf,0,buf_size);     
+	while(true){ 
+		int ret = read(cli->m_sockfd,buf,buf_size);
+		if(ret == 0 ) break;
+		if(ret == -1){
+			perror("dadada read failed!\n");
 			exit(1);
 		}   
 		printf("%s",buf);
 		memset(buf,0,buf_size);
 	}
+	//3.服务器断开连接
+	printf("服务器已断开!");
 	free(buf);
 	buf = NULL;
+	cli->m_sockfd = 0;
 	pthread_exit(NULL);
 }
 
@@ -85,66 +89,68 @@ void* TcpClient::Read(void* argv){
  *@buf：需要发送的内容
  *@buf_size：字符串的长度
  */
-int TcpClient::Write(char* buf,int buf_size){
+int TcpClient::Write(const char* buf,int buf_size){
 	return write(m_sockfd,buf,buf_size);
 }
 
 
 /*
-*UploadFileInfo - 告诉服务器需要发送的文件 和 大小
-*	参数
-*		@full_file_name：含有路径的文件名
-*/
-void TcpClient::UploadFileInfo(char* full_file_name){
-//step1:打开文件:以只读的方式打开文件
+ *UploadFileInfo - 告诉服务器需要发送的文件 和 大小
+ *
+ *@full_file_name：含有路径的文件名
+ */
+long TcpClient::UploadFileInfo(char* full_file_name){
+	//step1:打开文件:以只读的方式打开文件
 	FILE* fd;
 	if((fd = fopen(full_file_name,"rb")) == NULL){
 		printf("file doesn't exist!");
 		exit(1);
 	}
 
-//step2:获取文件的大小:通过调用fseek()函数来将文件指针移动到文件尾部，然后使用ftell()函数来获取文件大小。
+	//step2:获取文件的大小:通过调用fseek()函数来将文件指针移动到文件尾部，然后使用ftell()函数来获取文件大小。
 	fseek(fd, 0, SEEK_END);			//文件结尾
-    long file_size = ftell(fd);
+	long file_size = ftell(fd);
 	fseek(fd, 0, SEEK_SET);			//文件开头
 
-//step3:发送文件名字和大小
+	//step3:发送文件名字和大小
 	char* file_name = basename(full_file_name);//获取文件名字如client.cpp, 头文件include<libgen.h>
-	char buf[FILE_NAME_LEN + 50]={0};
-	sprintf(buf,"Uploadfile name:%s\nUploadfile size:%ld",file_name,file_size);//对其进行解析：sscanf(buf,"%s:%s\n%s:%ld",temp1,file_name,temp2,file_size);
+	char buf[150]={0};
+	sprintf(buf,"filemsg,%s,%ld",file_name,file_size);
 	int ret = this->Write(buf,sizeof(buf));
 	if(ret < 0){
 		perror("send file information failed!");
 		exit(1);
 	}
 
-//step4:关闭文件
+	//step4:关闭文件
 	fclose(fd);
-	printf("send file information successed!\nstart transferring file....\n");
-}
+	printf("send file information successed! start file transmit....\n");
+	return file_size;
+} 
 
 /*
-*UploadFile()-向服务器 上传文件
-*
-*@full_file_name:需要上传的文件名字    C:\Users\Administrator\Desktop\最终版本\v1.2\client.cpp
-*/
+ *UploadFile()-向服务器 上传文件;先发送 filemsg,<file_name>,<file_size> 再接字
+ *
+ *@full_file_name:需要上传的文件名字   hom  ./download/app
+ */
 void TcpClient::UploadFile(char* full_file_name){
-//step0:发送信息：文件名字，大小
-	UploadFileInfo(full_file_name);
+	//step0:发送信息：文件名字，大小
+	long file_size = UploadFileInfo(full_file_name);
 
-//step1:打开文件:以只读的方式打开文件
-	FILE* read_file_ptr;
+	//step1:打开文件:以只读的方式打开文件
+	FILE* read_file_ptr = nullptr;
 	if((read_file_ptr = fopen(full_file_name,"rb")) == NULL){
 		printf("Fail to open \n");
 		exit(1);
 	}
 
-//setp2:读取数据并发送
-	char buf[(int)BUF_SIZE] = {0};
+	//setp2:读取数据并发送
+	char buf[(int)SEND_BUF_SIZE] = {0};
 	int read_count;
-	while(read_count = fread(buf,1,(int)BUF_SIZE,read_file_ptr) > 0){
+	int total_write = 0;
+	while((read_count = fread(buf,1,(int)SEND_BUF_SIZE,read_file_ptr)) > 0){
 		//检查读是否正确
-		if((read_count < BUF_SIZE) && ferror(read_file_ptr)){
+		if((read_count < (int)SEND_BUF_SIZE) && ferror(read_file_ptr)){
 			perror("fread error!");
 			fclose(read_file_ptr);
 			exit(1);
@@ -152,13 +158,14 @@ void TcpClient::UploadFile(char* full_file_name){
 		//检查发送是否正确
 		int ret = this->Write(buf,read_count);
 		if(ret == -1){
-			perror("write error!");
+			perror("write error!");              
 			fclose(read_file_ptr);
 			exit(1);
 		}
-		memset(buf,0,BUF_SIZE);
+		total_write += ret;
+		printf("send %d bytes,total send %d/%ld bytes\n",ret,total_write,file_size);
+		memset(buf,0,(int)SEND_BUF_SIZE);
 	}
-//step4:关闭文件
+	//step4:关闭文件
 	fclose(read_file_ptr);
-	printf("\'%s\'传输完成...",full_file_name);
 }
