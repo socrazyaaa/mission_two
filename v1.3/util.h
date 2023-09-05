@@ -65,7 +65,7 @@ void* ServerWork(void* argv){
 		timeinfo = localtime(&cur);
 		printf("%s---------\t%s 加入了连接\t-----------\n",asctime(timeinfo),client_ip);
 		//创建工作线程
-	  pthread_t tid;
+		pthread_t tid;
 		pthread_create(&tid,NULL,TcpServer::Read,new Msg(client_sockfd,client_ip,ser));
 		pthread_detach(tid);
 		//清空ip
@@ -83,7 +83,7 @@ void Work(int argc,char *argv[]){
 
 	//2.创建客户端，运行方式： $ ./app 127.xxx.xxx.xxx
 	if(argc >= 2)	
-    ClientWork(argv[1],cli);
+		ClientWork(argv[1],cli);
 
 	//3.创建服务器，运行方式：	$ ./app 或者 $ ./app 127.0.0.1
 	if(argc <= 2){
@@ -91,7 +91,7 @@ void Work(int argc,char *argv[]){
 		pthread_create(&tid,NULL,ServerWork,ser);
 		pthread_detach(tid);
 	}
-  printf("请按以下格式输入需要执行的任务\n@server:xxxxx\t@client:xxxxx\t@fileTransfer:xxxxx\n");
+	printf("请按以下格式输入需要执行的任务\n@server:xxxxx\t@client:xxxxx\t@fileTransfer:xxxxx\n");
 	//4.读取控制台输入,并进行相应的操作
 	char buf[(int)FGETS_SIZE]={0};//@server:xxxxx   @client:xxxxx    @fileTransfer:xxxxxx
 	while(fgets(buf,sizeof(buf),stdin)){
@@ -103,8 +103,8 @@ void Work(int argc,char *argv[]){
 				continue;
 			}
 			ptr = strtok(NULL,":");
-      char file_name[100]={0};
-      strncpy(file_name,ptr,strlen(ptr)-1);
+			char file_name[100]={0};
+			strncpy(file_name,ptr,strlen(ptr)-1);
 			cli->Write("fileTransmit",13);
 			cli->UploadFile(file_name);
 			printf("%s文件传输完成！\n",file_name);
@@ -134,13 +134,13 @@ void Work(int argc,char *argv[]){
 			struct tm* timeinfo = localtime(&cur);
 			char broadcast_buf[512] = {0};
 			//拼接时间信息
-      
+
 			sprintf(broadcast_buf,"%sserver broadcast:%s\n",asctime(timeinfo),ptr);
 			//进行广播
 			TcpServer::Broadcast(0,broadcast_buf,sizeof(broadcast_buf),ser);
 			memset(broadcast_buf,0,sizeof(broadcast_buf));
 		}
-    printf("请按以下格式输入需要执行的任务\n@server:xxxxx\t@client:xxxxx\t@fileTransfer:xxxxx\n");
+		printf("请按以下格式输入需要执行的任务\n@server:xxxxx\t@client:xxxxx\t@fileTransfer:xxxxx\n");
 		memset(buf,0,sizeof(buf));
 	}
 	delete cli;
