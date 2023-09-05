@@ -75,10 +75,9 @@ void* ServerWork(void* argv){
 
 
 void Work(int argc,char *argv[]){
-	//1.实例化服务器对象和客户端对象
+	//1.服务器对象和客户端对象指针
 	TcpClient *cli = nullptr;
 	TcpServer *ser = nullptr;
-	int flag = 1;		// flag = 1，表示进行聊天；flag  = 2 表示向服务器上传文件
 
 	//2.创建客户端，运行方式： $ ./app 127.xxx.xxx.xxx
 	if(argc >= 2){
@@ -89,8 +88,8 @@ void Work(int argc,char *argv[]){
 	//3.创建服务器，运行方式：	$ ./app 或者 $ ./app 127.0.0.1
 	if(argc <= 2){
 		pthread_t tid;
-		ser = new TcpServer((int) PORT,(int) MAXCLIENT)
-			pthread_create(&tid,NULL,ServerWork,ser);
+		ser = new TcpServer((int) PORT,(int) MAXCLIENT);
+		pthread_create(&tid,NULL,ServerWork,ser);
 		pthread_detach(tid);
 	}
 
