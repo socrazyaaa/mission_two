@@ -4,15 +4,16 @@
 v1.3更新如下
 - 支持向客户端向服务端上传文件。服务器端将客户端上传的文件保存到`./download/`目录下;
 - 支持仅向服务器或者连接到此电脑的客户端发送消息。
+# 文件结构
 
 ```
 .
 ├── client.cpp
 ├── client.h
-├── main.cpp
-├── README.md
 ├── server.cpp
 ├── server.h
+├── README.md
+├── main.cpp
 └── util.h
 
 0 directories, 7 files
