@@ -102,8 +102,8 @@ void Work(int argc,char *argv[]){
 				continue;
 			}
 			ptr = strtok(NULL,":");
-            char file_name[100]={0};
-            strncpy(file_name,ptr,strlen(ptr)-1);
+			char file_name[100]={0};
+			strncpy(file_name,ptr,strlen(ptr)-1);
 			cli->Write("fileTransmit",13);
 			cli->UploadFile(file_name);
 			printf("%s文件传输完成！\n",file_name);
@@ -131,7 +131,7 @@ void Work(int argc,char *argv[]){
 			time(&cur);
 			struct tm* timeinfo = localtime(&cur);
 			char broadcast_buf[512] = {0};
-      		ptr = strtok(NULL,":");
+			ptr = strtok(NULL,":");
 			sprintf(broadcast_buf,"%sserver broadcast:%s\n",asctime(timeinfo),ptr);
 			//进行广播
 			TcpServer::Broadcast(0,broadcast_buf,sizeof(broadcast_buf),ser);
