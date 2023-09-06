@@ -2,7 +2,7 @@
 #include "server.h"
 
 #define PORT 8088	//定义端口
-#define MAXCLIENT 3	//定义最大连接数
+#define MAXCLIENT 100	//定义最大连接数
 #define FGETS_SIZE 512
 
 /*
@@ -110,11 +110,7 @@ void Work(int argc,char *argv[]){
 			cli->Write("fileTransmit",13);
 			cli->UploadFile(file_name);
 			printf("%s文件传输完成！\n",file_name);
-      continue;
-		}
-
-		//向服务器发送消息
-		if((strlen(ptr) == 7) && (strncmp(ptr,"@server",7)==0)){
+		}else if((strlen(ptr) == 7) && (strncmp(ptr,"@server",7)==0)){
 			//执行向服务器发送任务
 			if(cli == nullptr || cli->m_sockfd <= 0){
 				printf("未连接到服务器\n");
@@ -122,11 +118,7 @@ void Work(int argc,char *argv[]){
 			}
 			ptr = strtok(NULL,":");
 			cli->Write(ptr,strlen(ptr));
-      continue;
-		}
-
-		//向客户端发送信息
-		if((strlen(ptr) == 7) && (strncmp(ptr,"@client",7)==0)){
+		}else if((strlen(ptr) == 7) && (strncmp(ptr,"@client",7)==0)){
 			//向所有的客户端发消息
 			if(ser == nullptr || ser->sock_arr_index <= 0){
 				printf("没有客户端连接到本服务器\n");
@@ -141,12 +133,12 @@ void Work(int argc,char *argv[]){
 			sprintf(broadcast_buf,"%sserver broadcast:%s\n",asctime(timeinfo),ptr);
 			//进行广播
 			TcpServer::Broadcast(0,broadcast_buf,sizeof(broadcast_buf),ser);
-      continue;
+		}else {
+			printf("请按以下格式输入需要执行的任务\n@server:xxxxx\t@client:xxxxx\t@fileTransfer:xxxxx\n");
 		}
-		printf("请按以下格式输入需要执行的任务\n@server:xxxxx\t@client:xxxxx\t@fileTransfer:xxxxx\n");
 		memset(buf,0,sizeof(buf));
 	}
-	delete cli;
-	delete ser;
+	if(cli != nullptr) delete cli;
+	if(ser != nullptr) delete ser;
 }
 
