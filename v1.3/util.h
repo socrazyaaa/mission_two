@@ -2,8 +2,9 @@
 #include "server.h"
 
 #define PORT 8088	//定义端口
-#define MAXCLIENT 100	//定义最大连接数
+#define MAXCLIENT 3	//定义最大连接数
 #define FGETS_SIZE 512
+
 
 /*
  *ClientWork-客户端工作线程：向服务器发起连接，并进行双工通信
@@ -46,7 +47,7 @@ void* ServerWork(void* argv){
 	time_t cur;
 	struct tm *timeinfo;
 
-	//3.获取客户端的ip和套接字,并创建线程进行通信
+	//3.获取客户端的 ip和套接字
 	while(ser->ConnectToClient(client_ip,&client_sockfd)){
 		//判断是否达到连接上限
 		if(ser->sock_arr_index >= ser->max_client){
@@ -64,7 +65,7 @@ void* ServerWork(void* argv){
 		timeinfo = localtime(&cur);
 		printf("%s---------\t%s 加入了连接\t-----------\n",asctime(timeinfo),client_ip);
 		//创建工作线程
-		pthread_t tid;
+	  pthread_t tid;
 		pthread_create(&tid,NULL,TcpServer::Read,new Msg(client_sockfd,client_ip,ser));
 		pthread_detach(tid);
 		//清空ip
@@ -75,70 +76,74 @@ void* ServerWork(void* argv){
 
 
 void Work(int argc,char *argv[]){
-	//1.服务器对象和客户端对象指针
-	TcpClient *cli = nullptr;
-	TcpServer *ser = nullptr;
+	//1.实例化服务器对象和客户端对象
+	TcpClient *cli = new TcpClient((int) PORT);
+	TcpServer *ser = new TcpServer((int) PORT,(int) MAXCLIENT);
+	int flag = 1;		// flag = 1，表示进行聊天；flag  = 2 表示向服务器上传文件
 
 	//2.创建客户端，运行方式： $ ./app 127.xxx.xxx.xxx
-	if(argc >= 2){
-		cli = new TcpClient((int) PORT);
-		ClientWork(argv[1],cli);
-	}
+	if(argc >= 2)	
+    ClientWork(argv[1],cli);
 
 	//3.创建服务器，运行方式：	$ ./app 或者 $ ./app 127.0.0.1
 	if(argc <= 2){
 		pthread_t tid;
-		ser = new TcpServer((int) PORT,(int) MAXCLIENT);
 		pthread_create(&tid,NULL,ServerWork,ser);
 		pthread_detach(tid);
 	}
-
+  printf("请按以下格式输入需要执行的任务\n@server:xxxxx\t@client:xxxxx\t@fileTransfer:xxxxx\n");
 	//4.读取控制台输入,并进行相应的操作
-	printf("请按以下格式输入需要执行的任务\n@server:xxxxx\t@client:xxxxx\t@fileTransfer:xxxxx\n");
-	char buf[(int)FGETS_SIZE]={0};
+	char buf[(int)FGETS_SIZE]={0};//@server:xxxxx   @client:xxxxx    @fileTransfer:xxxxxx
 	while(fgets(buf,sizeof(buf),stdin)){
 		char* ptr = strtok(buf,":");
+
 		//向服务器上传文件
 		if((strlen(ptr) == 13) && (strncmp(ptr,"@fileTransfer",13) == 0)){
-			if(cli == nullptr || cli->m_sockfd <= 0){
+			if(cli->m_sockfd <= 0){
 				printf("未连接到服务器\n");
 				continue;
 			}
 			ptr = strtok(NULL,":");
-			char file_name[100]={0};
-			strncpy(file_name,ptr,strlen(ptr)-1);
+      char file_name[100]={0};
+      strncpy(file_name,ptr,strlen(ptr)-1);
 			cli->Write("fileTransmit",13);
 			cli->UploadFile(file_name);
 			printf("%s文件传输完成！\n",file_name);
-		}else if((strlen(ptr) == 7) && (strncmp(ptr,"@server",7)==0)){
+		}
+
+		//向服务器发送消息
+		if((strlen(ptr) == 7) && (strncmp(ptr,"@server",7)==0)){
 			//执行向服务器发送任务
-			if(cli == nullptr || cli->m_sockfd <= 0){
+			if(cli->m_sockfd <= 0){
 				printf("未连接到服务器\n");
 				continue;
 			}
 			ptr = strtok(NULL,":");
-			cli->Write(ptr,strlen(ptr));
-		}else if((strlen(ptr) == 7) && (strncmp(ptr,"@client",7)==0)){
+			cli->Write(ptr,strlen(ptr)+1);
+		}
+
+		//向客户端发送信息
+		if((strlen(ptr) == 7) && (strncmp(ptr,"@client",7)==0)){
 			//向所有的客户端发消息
-			if(ser == nullptr || ser->sock_arr_index <= 0){
+			if(ser->sock_arr_index <= 0){
 				printf("没有客户端连接到本服务器\n");
 				continue;
 			}
-			//拼接时间信息
+			ptr = strtok(NULL,":");
 			time_t cur;
 			time(&cur);
 			struct tm* timeinfo = localtime(&cur);
 			char broadcast_buf[512] = {0};
-			ptr = strtok(NULL,":");
+			//拼接时间信息
+      
 			sprintf(broadcast_buf,"%sserver broadcast:%s\n",asctime(timeinfo),ptr);
 			//进行广播
 			TcpServer::Broadcast(0,broadcast_buf,sizeof(broadcast_buf),ser);
-		}else {
-			printf("请按以下格式输入需要执行的任务\n@server:xxxxx\t@client:xxxxx\t@fileTransfer:xxxxx\n");
+			memset(broadcast_buf,0,sizeof(broadcast_buf));
 		}
 		memset(buf,0,sizeof(buf));
 	}
-	if(cli != nullptr) delete cli;
-	if(ser != nullptr) delete ser;
+	delete cli;
+	delete ser;
 }
 

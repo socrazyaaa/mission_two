@@ -70,7 +70,7 @@ void* TcpClient::Read(void* argv){
 		int ret = read(cli->m_sockfd,buf,buf_size);
 		if(ret == 0 ) break;
 		if(ret == -1){
-			perror("dadada read failed!\n");
+			perror("read failed!\n");
 			exit(1);
 		}   
 		printf("%s",buf);
@@ -100,6 +100,7 @@ int TcpClient::Write(const char* buf,int buf_size){
  *@full_file_name：含有路径的文件名
  */
 long TcpClient::UploadFileInfo(char* full_file_name){
+ // printf("strlen(file_name) = %d,文件名为:%s",strlen(full_file_name),full_file_name);
 	//step1:打开文件:以只读的方式打开文件
 	FILE* fd;
 	if((fd = fopen(full_file_name,"rb")) == NULL){
@@ -124,7 +125,7 @@ long TcpClient::UploadFileInfo(char* full_file_name){
 
 	//step4:关闭文件
 	fclose(fd);
-	printf("send file information successed! start file transmit....\n");
+	printf("The file information has been sent successfully.File transfer start...\n");
 	return file_size;
 } 
 
@@ -169,3 +170,4 @@ void TcpClient::UploadFile(char* full_file_name){
 	//step4:关闭文件
 	fclose(read_file_ptr);
 }
+

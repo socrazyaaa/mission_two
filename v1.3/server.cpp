@@ -221,7 +221,7 @@ void TcpServer::SaveFilefromClient(int sockfd){
 		printf("start recevie file\nfile name:%s \tfile size:%ld\n",file_info[1],file_size);
 		GetSaveFileName(file_info[1]);				//获取一个保存路径
 		SaveFile(sockfd,file_info[1],file_size);	//sockfd从读取file_size的内容，保存到file_info[1]路径下
-		printf("file saved to %s successfully\n",file_info[1]);
+		printf("file has been saved to %s successfully\n",file_info[1]);
 	}
 	pthread_exit(NULL);
 }
