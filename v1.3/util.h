@@ -5,7 +5,6 @@
 #define MAXCLIENT 3	//定义最大连接数
 #define FGETS_SIZE 512
 
-
 /*
  *ClientWork-客户端工作线程：向服务器发起连接，并进行双工通信
  *@ip：服务器的IP，由程序启动时传入
@@ -65,7 +64,7 @@ void* ServerWork(void* argv){
 		timeinfo = localtime(&cur);
 		printf("%s---------\t%s 加入了连接\t-----------\n",asctime(timeinfo),client_ip);
 		//创建工作线程
-	  pthread_t tid;
+	    pthread_t tid;
 		pthread_create(&tid,NULL,TcpServer::Read,new Msg(client_sockfd,client_ip,ser));
 		pthread_detach(tid);
 		//清空ip
@@ -79,7 +78,6 @@ void Work(int argc,char *argv[]){
 	//1.实例化服务器对象和客户端对象
 	TcpClient *cli = new TcpClient((int) PORT);
 	TcpServer *ser = new TcpServer((int) PORT,(int) MAXCLIENT);
-	int flag = 1;		// flag = 1，表示进行聊天；flag  = 2 表示向服务器上传文件
 
 	//2.创建客户端，运行方式： $ ./app 127.xxx.xxx.xxx
 	if(argc >= 2)	
@@ -104,8 +102,8 @@ void Work(int argc,char *argv[]){
 				continue;
 			}
 			ptr = strtok(NULL,":");
-      char file_name[100]={0};
-      strncpy(file_name,ptr,strlen(ptr)-1);
+            char file_name[100]={0};
+            strncpy(file_name,ptr,strlen(ptr)-1);
 			cli->Write("fileTransmit",13);
 			cli->UploadFile(file_name);
 			printf("%s文件传输完成！\n",file_name);
@@ -124,18 +122,16 @@ void Work(int argc,char *argv[]){
 
 		//向客户端发送信息
 		if((strlen(ptr) == 7) && (strncmp(ptr,"@client",7)==0)){
-			//向所有的客户端发消息
 			if(ser->sock_arr_index <= 0){
 				printf("没有客户端连接到本服务器\n");
 				continue;
 			}
-			ptr = strtok(NULL,":");
+			//拼接时间信息
 			time_t cur;
 			time(&cur);
 			struct tm* timeinfo = localtime(&cur);
 			char broadcast_buf[512] = {0};
-			//拼接时间信息
-      
+      		ptr = strtok(NULL,":");
 			sprintf(broadcast_buf,"%sserver broadcast:%s\n",asctime(timeinfo),ptr);
 			//进行广播
 			TcpServer::Broadcast(0,broadcast_buf,sizeof(broadcast_buf),ser);
