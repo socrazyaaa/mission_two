@@ -24,7 +24,7 @@ v1.3更新如下
 $ ./app xx.xx.xx.131
 请按以下格式输入需要执行的任务
 @server:xxxxx   @client:xxxxx   @fileTransfer:xxxxx
-@fileTransfer:./app
+>@fileTransfer:./app
 The file information has been sent successfully.File transfer start...
 send 4096 bytes,total send 4096/33304 bytes
 send 4096 bytes,total send 8192/33304 bytes
